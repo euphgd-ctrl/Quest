@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p dist
           find app/build/outputs/apk -type f -name '*.apk' -print
-          universal="$(find app/build/outputs/apk -type f -name '*universal*.apk' | head -n 1)"
+          universal="$(find app/build/outputs/apk -type f -name '*.apk' ! -name '*arm64-v8a*' ! -name '*armeabi-v7a*' | head -n 1)"
           if [ -z "$universal" ]; then
             echo "Universal APK not found" >&2
             exit 1
