@@ -1,24 +1,41 @@
 name: Build Quest test APK
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: ./.github/actions/setup
-      - name: Build installable debug APK
-        run: ./gradlew assembleDebug --no-daemon
-      - name: Upload Quest APK
+
+      - name: Set up Android build environment
+        uses: ./.github/actions/setup
+
+      - name: Build signed debug APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Show APK outputs
+        if: always()
+        run: find app/build/outputs -type f -name '*.apk' -print || true
+
+      - name: Upload test APKs
         uses: actions/upload-artifact@v4
         with:
           name: Quest-test-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/**/*.apk
           if-no-files-found: error
+          retention-days: 30
