@@ -1,41 +1,59 @@
-name: Build Quest test APK
+name: Build Quest APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Checkout with submodules
+      - name: Checkout source and submodules
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Set up Android build environment
+      - name: Setup build environment
         uses: ./.github/actions/setup
 
-      - name: Build signed debug APK
+      - name: Build debug APK
         run: |
-          chmod +x ./gradlew
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Show APK outputs
-        if: always()
-        run: find app/build/outputs -type f -name '*.apk' -print || true
+      - name: Prepare universal APK
+        run: |
+          mkdir -p dist
+          find app/build/outputs/apk -type f -name '*.apk' -print
+          universal="$(find app/build/outputs/apk -type f -name '*universal*.apk' | head -n 1)"
+          if [ -z "$universal" ]; then
+            echo "Universal APK not found" >&2
+            exit 1
+          fi
+          cp "$universal" dist/Quest-test.apk
+          sha256sum dist/Quest-test.apk > dist/SHA256SUMS.txt
 
-      - name: Upload test APKs
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Quest-test-apk
-          path: app/build/outputs/apk/**/*.apk
+          path: dist/*
           if-no-files-found: error
-          retention-days: 30
+
+      - name: Publish test APK download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete quest-test --yes --cleanup-tag 2>/dev/null || true
+          git tag -f quest-test "${GITHUB_SHA}"
+          git push --force origin refs/tags/quest-test
+          gh release create quest-test dist/Quest-test.apk dist/SHA256SUMS.txt \
+            --title "Quest test APK" \
+            --notes "Development test build from commit ${GITHUB_SHA}. Debug-signed; for testing only." \
+            --prerelease
