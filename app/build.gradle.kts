@@ -71,7 +71,7 @@ configure<ApplicationExtension> {
     }
 
     defaultConfig {
-        applicationId = "com.github.damontecres.stashapp"
+        applicationId = "com.euphgd.quest"
         minSdk = 23
         targetSdk = 36
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -150,7 +150,7 @@ androidComponents {
                 val abi = output.getFilter(FilterConfiguration.FilterType.ABI)?.identifier
                 val parts =
                     listOf(
-                        "StashAppAndroidTV",
+                        "Quest",
                         variant.flavorName,
                         variant.buildType,
                         output.versionName.get(),
