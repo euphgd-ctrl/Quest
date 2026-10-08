@@ -33,17 +33,10 @@ plugins {
     alias(libs.plugins.protobuf)
 }
 
-val gitTags =
-    providers
-        .exec { commandLine("git", "tag", "--list", "v*") }
-        .standardOutput.asText
-        .get()
-
-val gitDescribe =
-    providers
-        .exec { commandLine("git", "describe", "--tags", "--long", "--match=v*") }
-        .standardOutput.asText
-        .getOrElse("v0.0.0")
+// The fork has no upstream v* tags. Use the workflow run number for builds.
+val questBuildNumber =
+    providers.environmentVariable("GITHUB_RUN_NUMBER").orElse("1")
+        .map { it.toIntOrNull()?.coerceAtLeast(1) ?: 1 }
 
 kotlin {
     compilerOptions {
@@ -75,8 +68,8 @@ configure<ApplicationExtension> {
         minSdk = 23
         targetSdk = 36
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = gitTags.trim().lines().size
-        versionName = gitDescribe.trim().removePrefix("v").ifBlank { "0.0.0" }
+        versionCode = questBuildNumber.get()
+        versionName = "0.1.${questBuildNumber.get()}"
         vectorDrawables.useSupportLibrary = true
     }
     signingConfigs {
